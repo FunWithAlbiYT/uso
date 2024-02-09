@@ -1,6 +1,7 @@
 {
     "skin": "uso",
     "keyBinds": {
+        "exit": "ESCAPE",
         "left": "F",
         "right": "H",
         "up": "T",

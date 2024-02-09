@@ -2,14 +2,18 @@
 #include <fstream>
 #include <json.hpp>
 #include <iostream>
+#include <map>
+#include <keycodes.hpp>
 
-nlohmann::json config;
-nlohmann::json skinConfig;
+using json = nlohmann::json;
+
+json config;
 std::string resDir;
-std::map<char, std::string> binds;
+std::map<std::string, sf::Keyboard::Key> binds;
 
 void init();
-std::string getJsonString(nlohmann::json value);
+std::string getJsonString(const json& value);
+bool keyDown(sf::Keyboard::Key key);
 
 int main() {
     init();
@@ -28,12 +32,10 @@ int main() {
  
         window.clear();
 
-        // make some level selection shit
-
         /*
         
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key(binds["up"]))) {
-            // handle keypress
+        if (keyDown(binds["down"])) {
+            // key is pressed
         }
 
         */
@@ -45,22 +47,32 @@ int main() {
 }
 
 void init() {
-    std::cout << "test";
-
     std::ifstream configFile("config.json");
-    configFile >> config;
+    config = json::parse(configFile);
     configFile.close();
 
     resDir = "./" + getJsonString(config["skin"]) + "/";
-    std::cout << resDir;
-
-    std::ifstream skinFile(resDir + "skin.json");
-    skinFile >> skinConfig;
-    skinFile.close();
-
-    binds = config["keyBinds"];
+    
+    auto keyBinds = config["keyBinds"];
+    for (auto it = keyBinds.begin(); it != keyBinds.end(); ++it) {
+        binds[it.key()] = getSFMLKeyCode(it.value());
+    }
 }
 
-std::string getJsonString(nlohmann::json value) {
+std::string getJsonString(const json& value) {
     return value.get<std::string>();
+}
+
+bool keyDown(sf::Keyboard::Key key) {
+    static bool wasKeyPressed = false; 
+    bool isKeyPressed = sf::Keyboard::isKeyPressed(key);
+
+    if (isKeyPressed && !wasKeyPressed) {
+        wasKeyPressed = true;
+        return true;
+    } else if (!isKeyPressed) {
+        wasKeyPressed = false;
+    }
+
+    return false;
 }
