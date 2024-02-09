@@ -14,7 +14,7 @@ std::string getJsonString(nlohmann::json value);
 int main() {
     init();
 
-    sf::RenderWindow window(sf::VideoMode(800, 600), "USO!");
+    sf::RenderWindow window(sf::VideoMode(1000, 800), "USO!");
  
     while (window.isOpen())
     {
@@ -45,11 +45,14 @@ int main() {
 }
 
 void init() {
+    std::cout << "test";
+
     std::ifstream configFile("config.json");
     configFile >> config;
     configFile.close();
 
-    resDir = "./" + config["skin"].get<std::string>() + "/";
+    resDir = "./" + getJsonString(config["skin"]) + "/";
+    std::cout << resDir;
 
     std::ifstream skinFile(resDir + "skin.json");
     skinFile >> skinConfig;
