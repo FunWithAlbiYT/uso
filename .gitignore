@@ -1,0 +1,4 @@
+app
+*.gch
+*.o
+.vscode
