@@ -1,4 +1,5 @@
-app
 *.gch
 *.o
+*.exe
 .vscode
+app

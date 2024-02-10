@@ -1,0 +1,13 @@
+{
+    "name": "Tomspicy - Fieryrage Accordion [Hardcore Remix]",
+    "bpm": 182,
+    "length": 44,
+    "songFile": "fieryrage_accordion.mp3",
+    "approachRate": 1.25,
+    "leveldata": [
+        [1, 0],
+        [4, 1],
+        [8, 1],
+        [12, 0]
+    ]
+}
