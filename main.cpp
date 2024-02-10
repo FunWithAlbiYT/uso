@@ -26,6 +26,7 @@ bool keyDown(sf::Keyboard::Key key);
 std::map<int, std::map<std::string, std::string>> getLevels(const std::string& directory_path);
 
 sf::RenderWindow window(sf::VideoMode(screenWidth, screenHeight, sf::Style::Fullscreen), "USO!");
+BeatTracker beatTracker(1);
 
 bool anyKeyDown();
 bool keyPressed = false;
@@ -34,6 +35,8 @@ bool inMenu = true;
 bool inStart = true;
 
 int selectedLevel = 1;
+int score = 0;
+double accuracy = 100.0;
 
 int main() {
     init();
@@ -45,12 +48,36 @@ int main() {
     }
 
     sf::Text usoText;
-    usoText.setPosition(sf::Vector2f(screenWidth / 2.0f - usoText.getLocalBounds().width / 2.0f, 2.0f * 40.0f));
-    usoText.setFont(font);
     usoText.setString("USO!");
+    usoText.setPosition(sf::Vector2f(screenWidth / 1.8f - usoText.getLocalBounds().width / 2.0f, 2.0f * 40.0f));
+    usoText.setFont(font);
     usoText.setFillColor(sf::Color::White);
 
+    sf::Text scoreText;
+    scoreText.setString("Score: 0");
+    scoreText.setPosition(sf::Vector2f(screenWidth / 1.8f - scoreText.getLocalBounds().width / 2.0f, screenHeight - (0.25f * 40.0f)));
+    scoreText.setFont(font);
+    scoreText.setFillColor(sf::Color::White);
+
+    sf::RectangleShape beaterLeft;
+    beaterLeft.setPosition(sf::Vector2(screenWidth / 2.0f, screenHeight / 2.5f));
+    beaterLeft.setFillColor(sf::Color::Blue);
+    beaterLeft.setOutlineColor(sf::Color::Red);
+    beaterLeft.setOutlineThickness(3.0f);
+    beaterLeft.setSize(sf::Vector2(3.0f * 40.0f, 6.5f * 40.0f));
+
+    sf::RectangleShape beaterRight;
+    beaterRight.setPosition(sf::Vector2(screenWidth / 2.3f, screenHeight / 2.5f));
+    beaterRight.setFillColor(sf::Color::Red);
+    beaterRight.setOutlineColor(sf::Color::Blue);
+    beaterRight.setOutlineThickness(3.0f);
+    beaterRight.setSize(sf::Vector2(3.0f * 40.0f, 6.5f * 40.0f));
+
     const auto& levels = getLevels("./levels");
+    int beats = 0;
+
+    auto lastTimeTextChanged = std::chrono::high_resolution_clock::now();
+    bool musicPlayed = false;
 
     while (window.isOpen()) {
         sf::Event event;
@@ -120,13 +147,18 @@ int main() {
         }
 
         if (inGame) {
-            if (keyDown(binds["exit"]) || (music.getStatus() != sf::Music::Playing && !inStart)) {
+            if (keyDown(binds["exit"]) || (music.getStatus() != sf::Music::Playing && !inStart && musicPlayed)) {
                 inGame = false;
                 inMenu = true;
+                musicPlayed = false;
+                score = 0;
+                usoText.setString("USO!");
+                usoText.setFillColor(sf::Color::White);
                 music.stop();
             }
 
             if (inStart) {
+                beats = 0;
                 inStart = false;
 
                 if (
@@ -141,8 +173,55 @@ int main() {
                     return EXIT_FAILURE;
                 }
 
-                music.setVolume(85);
-                music.play();
+                music.setVolume(80);
+                beatTracker = BeatTracker(std::stoi(levels.at(selectedLevel-1).at("bpm")));
+            }
+
+            if (beatTracker.isBeat()) {
+                beats++;
+
+                for (const auto& note : levels.at(selectedLevel-1).at("levelData")) {
+                    int beatNumber = note - '0'; 
+                    int direction = (note == '0') ? 0 : 1;
+
+                    int scoreAdder = 0;
+                    sf::Color scoreColor = sf::Color::Red;
+
+                    if ((beatNumber >= beats && beatNumber < beats + 2) || (beatNumber < beats && beatNumber > (beats - 2))) {
+                        if ((direction == 0 && keyDown(binds["left"])) || (direction == 1 && keyDown(binds["right"]))) {
+                            int accuracy = abs(beatNumber - beats);
+                            if (accuracy == 0) {
+                                scoreAdder = 100;
+                                scoreColor = sf::Color::Green;
+                            } else if (accuracy == 1) {
+                                scoreAdder = 50;
+                                scoreColor = sf::Color::Yellow;
+                            }
+                        }
+                    }
+
+                    score += scoreAdder;
+                    accuracy = static_cast<double>(score) / beats * 100;
+                    
+                    lastTimeTextChanged = std::chrono::high_resolution_clock::now();
+                    usoText.setString(std::to_string(scoreAdder));
+                    usoText.setFillColor(scoreColor);
+                }
+            }
+
+            scoreText.setString("Score: "+std::to_string(score));
+
+            window.draw(scoreText);
+            window.draw(beaterLeft);
+            window.draw(beaterRight);
+
+            auto currentTime = std::chrono::high_resolution_clock::now();
+            auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - lastTimeTextChanged).count();
+
+            if (elapsedTime >= 400) {
+                usoText.setString("USO!");
+                usoText.setFillColor(sf::Color::White);
+                lastTimeTextChanged = currentTime;
             }
         }
 
@@ -173,9 +252,9 @@ std::map<int, std::map<std::string, std::string>> getLevels(const std::string& d
 
             std::map<std::string, std::string> level;
             level["name"] = jsonContent["name"].get<std::string>();
-            level["bpm"] = jsonContent["bpm"].get<int>();
+            level["bpm"] = std::to_string(jsonContent["bpm"].get<int>());
             level["songFile"] = jsonContent["songFile"].get<std::string>();
-            level["approachRate"] = jsonContent["approachRate"].get<int>();
+            level["approachRate"] = std::to_string(jsonContent["approachRate"].get<int>());
             level["directory"] = entry.path().parent_path().filename().string();
 
             json leveldataArray = jsonContent["leveldata"];
