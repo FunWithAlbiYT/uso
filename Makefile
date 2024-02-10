@@ -5,7 +5,7 @@ OBJECTS := $(SOURCES:.cpp=.o)
 
 compile-unix:
 	g++ -c $(SOURCES) -I.
-	g++ $(OBJECTS) -o app -lsfml-graphics -lsfml-window -lsfml-system
+	g++ $(OBJECTS) -o app -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio
 
 compile-win:
 	$(CC) -c $(SOURCES) -I/mingw64/include -I/mingw64/include/SFML -I. -m64

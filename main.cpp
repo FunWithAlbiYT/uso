@@ -1,11 +1,14 @@
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include <fstream>
 #include <iostream>
 #include <map>
 #include <filesystem>
 #include <json.hpp>
 #include <keycodes.hpp>
-#include <trackbeats.hpp>
+#include <metronome.hpp>
+#include <thread>
+#include <chrono>
 
 using json = nlohmann::json;
 
@@ -14,6 +17,7 @@ std::string resDir;
 std::map<std::string, sf::Keyboard::Key> binds;
 
 sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
+sf::Music music;
 unsigned int screenWidth = desktop.width;
 unsigned int screenHeight = desktop.height;
 
@@ -25,10 +29,10 @@ sf::RenderWindow window(sf::VideoMode(screenWidth, screenHeight, sf::Style::Full
 
 bool anyKeyDown();
 bool keyPressed = false;
+bool inGame = false;
 bool inMenu = true;
-bool inLevel = false;
+bool inStart = true;
 
-std::map<std::string, std::map<std::string, std::string>> levelData;
 int selectedLevel = 1;
 
 int main() {
@@ -39,6 +43,12 @@ int main() {
         std::cerr << "Failed to load font file." << std::endl;
         return EXIT_FAILURE;
     }
+
+    sf::Text usoText;
+    usoText.setPosition(sf::Vector2f(screenWidth / 2.0f - usoText.getLocalBounds().width / 2.0f, 2.0f * 40.0f));
+    usoText.setFont(font);
+    usoText.setString("USO!");
+    usoText.setFillColor(sf::Color::White);
 
     const auto& levels = getLevels("./levels");
 
@@ -97,12 +107,50 @@ int main() {
                     selectedLevel = levels.size();
                 }
             }
+
+            if (keyDown(binds["confirm"])) {
+                inMenu = false;
+                inGame = true;
+                inStart = true;
+            }
+
+            if (keyDown(binds["exit"])) {
+                window.close();
+            }
+        }
+
+        if (inGame) {
+            if (keyDown(binds["exit"]) || (music.getStatus() != sf::Music::Playing && !inStart)) {
+                inGame = false;
+                inMenu = true;
+                music.stop();
+            }
+
+            if (inStart) {
+                inStart = false;
+
+                if (
+                        !music.openFromFile(
+                            "./levels/" +
+                            levels.at(selectedLevel-1).at("directory") +
+                            "/" +
+                            levels.at(selectedLevel-1).at("songFile")
+                        )
+                    )
+                {
+                    return EXIT_FAILURE;
+                }
+
+                music.setVolume(85);
+                music.play();
+            }
         }
 
         if (!anyKeyDown()) {
             keyPressed = false;
         }
 
+        window.draw(usoText);
         window.display();
     }
 
@@ -126,9 +174,9 @@ std::map<int, std::map<std::string, std::string>> getLevels(const std::string& d
             std::map<std::string, std::string> level;
             level["name"] = jsonContent["name"].get<std::string>();
             level["bpm"] = jsonContent["bpm"].get<int>();
-            level["length"] = jsonContent["length"].get<int>();
             level["songFile"] = jsonContent["songFile"].get<std::string>();
             level["approachRate"] = jsonContent["approachRate"].get<int>();
+            level["directory"] = entry.path().parent_path().filename().string();
 
             json leveldataArray = jsonContent["leveldata"];
             std::vector<std::vector<int>> levelData;
