@@ -4,11 +4,11 @@ SOURCES := $(wildcard ./*.cpp)
 OBJECTS := $(SOURCES:.cpp=.o)
 
 compile-unix:
-	g++ -c $(SOURCES) -I.
+	g++ -std=c++17 -c $(SOURCES) -I.
 	g++ $(OBJECTS) -o app -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio
 
 compile-win:
-	$(CC) -c $(SOURCES) -I/mingw64/include -I/mingw64/include/SFML -I. -m64
+	$(CC) -std=c++17 -c $(SOURCES) -I/mingw64/include -I/mingw64/include/SFML -I. -m64
 	$(CC) $(OBJECTS) -o app.exe -L/mingw64/lib -lsfml-graphics -lsfml-window -lsfml-system -I.
 
 run:
